@@ -6,6 +6,7 @@ def run_query(query, parameters=()):
     conn = psycopg2.connect(dbname="studentdb", user="postgres", password="admin123", host="localhost", port="5432")
     cur = conn.cursor()
     query_result = None
+    
     try:
         cur.execute(query, parameters)
         if query.lower().startswith("select"):
