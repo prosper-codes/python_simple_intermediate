@@ -2,8 +2,8 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Student Management System</title>
     <style>
         * {
@@ -230,7 +230,7 @@
             </div>
             <div class="form-group">
                 <label for="age">Age:</label>
-                <input type="number" id="age" placeholder="Enter age">
+                <input type="number" id="age" placeholder="Enter age" min="0">
             </div>
             <div class="form-group">
                 <label for="number">Phone Number:</label>
@@ -266,172 +266,227 @@
     </div>
 
     <script>
-        // In-memory database to simulate PostgreSQL
-        let students = [];
-        let nextId = 1;
-        let selectedRow = null;
-        let tableCreated = false;
+        // ----- Configuration -----
+        const API_BASE = "http://localhost:8000"; // <-- running locally as you requested
 
-        // Show message function
-        function showMessage(message, type = 'success') {
-            const messageArea = document.getElementById('messageArea');
-            messageArea.innerHTML = `<div class="message ${type}">${message}</div>`;
-            setTimeout(() => {
-                messageArea.innerHTML = '';
-            }, 3000);
+        // ----- State -----
+        let students = []; // fetched from backend
+        let selectedStudentId = null;
+        let messageTimeoutId = null;
+
+        // ----- UI Helpers -----
+        function showMessage(text, type = "success") {
+            const container = document.getElementById("messageArea");
+            clearTimeout(messageTimeoutId);
+            container.innerHTML = `<div class="message ${type}">${escapeHtml(text)}</div>`;
+            messageTimeoutId = setTimeout(() => container.innerHTML = "", 3500);
         }
 
-        // Create table function
-        function createTable() {
-            tableCreated = true;
-            students = [];
-            nextId = 1;
-            showMessage('Table created successfully.');
-            refreshTreeview();
+        function escapeHtml(unsafe) {
+            if (unsafe === null || unsafe === undefined) return "";
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        // Refresh treeview function
-        function refreshTreeview() {
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
+        function clearForm() {
+            document.getElementById("name").value = "";
+            document.getElementById("address").value = "";
+            document.getElementById("age").value = "";
+            document.getElementById("number").value = "";
+            selectedStudentId = null;
+            // Remove selection highlight
+            const rows = document.querySelectorAll("#tableBody tr");
+            rows.forEach(r => r.classList.remove("selected"));
+        }
 
-            if (students.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="empty-state">No records found.</td></tr>';
+        // ----- Table rendering / selection -----
+        function refreshTable() {
+            const tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+
+            if (!students || students.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No records found.</td></tr>`;
                 return;
             }
 
-            students.forEach((student, index) => {
-                const row = document.createElement('tr');
-                row.onclick = function () {
-                    selectRow(this, index);
-                };
+            students.forEach((s, idx) => {
+                const row = document.createElement("tr");
+                row.onclick = () => selectRow(idx);
+                if (selectedStudentId === s.student_id) row.classList.add("selected");
 
                 row.innerHTML = `
-                    <td style="text-align: center;">${student.id}</td>
-                    <td>${student.name}</td>
-                    <td>${student.address}</td>
-                    <td style="text-align: center;">${student.age}</td>
-                    <td>${student.number}</td>
+                    <td style="text-align:center;">${escapeHtml(s.student_id)}</td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.address)}</td>
+                    <td style="text-align:center;">${escapeHtml(s.age)}</td>
+                    <td>${escapeHtml(s.number)}</td>
                 `;
-
-                tableBody.appendChild(row);
+                tbody.appendChild(row);
             });
         }
 
-        // Select row function
-        function selectRow(row, index) {
-            // Remove selection from all rows
-            const allRows = document.querySelectorAll('#tableBody tr');
-            allRows.forEach(r => r.classList.remove('selected'));
-
-            // Add selection to clicked row
-            row.classList.add('selected');
-            selectedRow = index;
-
-            // Fill form with selected data
+        function selectRow(index) {
             const student = students[index];
-            document.getElementById('name').value = student.name;
-            document.getElementById('address').value = student.address;
-            document.getElementById('age').value = student.age;
-            document.getElementById('number').value = student.number;
+            if (!student) return;
+
+            // Mark selection visually
+            const allRows = document.querySelectorAll("#tableBody tr");
+            allRows.forEach(r => r.classList.remove("selected"));
+            allRows[index].classList.add("selected");
+
+            // Save selected id and populate form
+            selectedStudentId = student.student_id;
+            document.getElementById("name").value = student.name;
+            document.getElementById("address").value = student.address;
+            document.getElementById("age").value = student.age;
+            document.getElementById("number").value = student.number;
         }
 
-        // Insert data function
-        function insertData() {
-            if (!tableCreated) {
-                showMessage('Please create table first.', 'error');
-                return;
+        // ----- API Calls -----
+        async function createTable() {
+            try {
+                const res = await fetch(`${API_BASE}/create-table`, { method: "POST" });
+                if (!res.ok) {
+                    const err = await res.text();
+                    throw new Error(err || `Server returned ${res.status}`);
+                }
+                const data = await res.json();
+                showMessage(data.message || "Table created successfully.");
+                await loadStudents();
+            } catch (err) {
+                console.error(err);
+                showMessage("Failed to create table: " + err.message, "error");
             }
-
-            const name = document.getElementById('name').value;
-            const address = document.getElementById('address').value;
-            const age = document.getElementById('age').value;
-            const number = document.getElementById('number').value;
-
-            if (!name || !address || !age || !number) {
-                showMessage('Please fill all fields.', 'error');
-                return;
-            }
-
-            const newStudent = {
-                id: nextId++,
-                name: name,
-                address: address,
-                age: parseInt(age),
-                number: number
-            };
-
-            students.push(newStudent);
-            showMessage('Data inserted successfully.');
-            clearForm();
-            refreshTreeview();
         }
 
-        // Update data function
-        function updateData() {
-            if (!tableCreated) {
-                showMessage('Please create table first.', 'error');
-                return;
+        async function loadStudents() {
+            try {
+                const res = await fetch(`${API_BASE}/students`);
+                if (!res.ok) {
+                    const err = await res.text();
+                    throw new Error(err || `Server returned ${res.status}`);
+                }
+                const list = await res.json();
+                // Expecting an array of { student_id, name, address, age, number }
+                students = Array.isArray(list) ? list : [];
+                selectedStudentId = null;
+                clearForm();
+                refreshTable();
+            } catch (err) {
+                console.error(err);
+                showMessage("Failed to load students: " + err.message, "error");
+                // keep existing students if any
             }
-
-            if (selectedRow === null) {
-                showMessage('Please select a record to update.', 'error');
-                return;
-            }
-
-            const name = document.getElementById('name').value;
-            const address = document.getElementById('address').value;
-            const age = document.getElementById('age').value;
-            const number = document.getElementById('number').value;
-
-            if (!name || !address || !age || !number) {
-                showMessage('Please fill all fields.', 'error');
-                return;
-            }
-
-            students[selectedRow] = {
-                id: students[selectedRow].id,
-                name: name,
-                address: address,
-                age: parseInt(age),
-                number: number
-            };
-
-            showMessage('Data updated successfully.');
-            clearForm();
-            selectedRow = null;
-            refreshTreeview();
         }
 
-        // Delete data function
-        function deleteData() {
-            if (!tableCreated) {
-                showMessage('Please create table first.', 'error');
-                return;
-            }
+        async function insertData() {
+            try {
+                const payload = getFormPayload();
+                if (!payload) return;
 
-            if (selectedRow === null) {
-                showMessage('Please select a record to delete.', 'error');
-                return;
+                const res = await fetch(`${API_BASE}/students`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const content = await res.text();
+                    throw new Error(content || `Server returned ${res.status}`);
+                }
+                const data = await res.json();
+                showMessage(data.message || "Data inserted successfully.");
+                clearForm();
+                await loadStudents();
+            } catch (err) {
+                console.error(err);
+                showMessage("Insert failed: " + err.message, "error");
             }
-
-            students.splice(selectedRow, 1);
-            showMessage('Data deleted successfully.');
-            clearForm();
-            selectedRow = null;
-            refreshTreeview();
         }
 
-        // Clear form function
-        function clearForm() {
-            document.getElementById('name').value = '';
-            document.getElementById('address').value = '';
-            document.getElementById('age').value = '';
-            document.getElementById('number').value = '';
+        async function updateData() {
+            if (!selectedStudentId) {
+                showMessage("Please select a record to update.", "error");
+                return;
+            }
+            try {
+                const payload = getFormPayload();
+                if (!payload) return;
+
+                const res = await fetch(`${API_BASE}/students/${selectedStudentId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    const content = await res.text();
+                    throw new Error(content || `Server returned ${res.status}`);
+                }
+                const data = await res.json();
+                showMessage(data.message || "Data updated successfully.");
+                clearForm();
+                await loadStudents();
+            } catch (err) {
+                console.error(err);
+                showMessage("Update failed: " + err.message, "error");
+            }
         }
 
-        // Initialize on page load
-        refreshTreeview();
+        async function deleteData() {
+            if (!selectedStudentId) {
+                showMessage("Please select a record to delete.", "error");
+                return;
+            }
+            // optional: confirm delete
+            if (!confirm("Are you sure you want to delete the selected student?")) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/students/${selectedStudentId}`, {
+                    method: "DELETE"
+                });
+                if (!res.ok) {
+                    const content = await res.text();
+                    throw new Error(content || `Server returned ${res.status}`);
+                }
+                const data = await res.json();
+                showMessage(data.message || "Data deleted successfully.");
+                clearForm();
+                await loadStudents();
+            } catch (err) {
+                console.error(err);
+                showMessage("Delete failed: " + err.message, "error");
+            }
+        }
+
+        // ----- Form validation and payload -----
+        function getFormPayload() {
+            const name = document.getElementById("name").value.trim();
+            const address = document.getElementById("address").value.trim();
+            const ageVal = document.getElementById("age").value;
+            const number = document.getElementById("number").value.trim();
+
+            if (!name || !address || !ageVal || !number) {
+                showMessage("Please fill all fields.", "error");
+                return null;
+            }
+
+            const age = parseInt(ageVal, 10);
+            if (isNaN(age) || age < 0) {
+                showMessage("Please enter a valid age.", "error");
+                return null;
+            }
+
+            return { name, address, age, number };
+        }
+
+        // ----- Init -----
+        // On load fetch students from backend
+        window.addEventListener("DOMContentLoaded", () => {
+            loadStudents();
+        });
     </script>
 </body>
 
