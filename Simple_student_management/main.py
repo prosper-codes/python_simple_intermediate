@@ -18,11 +18,11 @@ app.add_middleware(
 # Database connection function
 def get_db_connection():
     conn = psycopg2.connect(
-        dbname="studentdb",
+        dbname="student_db",
         user="postgres",
-        password="admin123",
+        password="qwerty123",
         host="localhost",
-        port="5432"
+        port="5433"
     )
     return conn
 
