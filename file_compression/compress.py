@@ -1,7 +1,7 @@
-import zlib
+import zlib,base64
 
 data = open('files\demo.txt','r').read() 
 data_types = bytes(data,'utf-8')
-compressed_file = zlib.compress(data_types)
-print(compressed_file)
+compressed_data = base64.b64encode(zlib.compress(data_types))
+
 
