@@ -5,7 +5,7 @@ import ast
 
 root = Tk()
 
-i =0
+i = 0
 
 def get_number(num):
     global i
