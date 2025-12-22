@@ -4,10 +4,22 @@ from fpdf import FPDF
 class PDF(FPDF):
     
     def header(self):
-        return super().header()
+          self.set_font("helvetica","",16)
+          width = self.get_string_width(self.title)+6
+          self.set_x((210-width)/2)
+          self.set_draw_color(90,100,160)
+          self.set_fill_color(50,20,210)
+          self.set_text_color(0,0,0)
+          self.set_line_width(1)
+          self.cell(width,10,self.title,new_x="LMARGIN",new_y="NEXT",align="C",fill="True")
+          self.ln(10)
+          
     
     def footer(self):
-        return super().footer()
+        self.set_y(-15)
+        self.set_font("helvetica","I",12)
+        self.set_text_color(128)
+        self.cell(0,10,f"Page {self.page_no()}", align="C")
     
     def chapter_title(self, num , label):
         self.set_font("Arial","",13)
@@ -34,6 +46,6 @@ class PDF(FPDF):
 
 
 pdf= PDF()
-
+pdf.set_title("Learn Hacking and Prosper")
 pdf.print_chapter(1,"WHAT IS A HACKER","sample.txt")
-pdf.output("demo.pdf",)
+pdf.output("demo.pdf")

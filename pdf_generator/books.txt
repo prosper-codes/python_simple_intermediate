@@ -1,0 +1,11 @@
+Book_ID,Title,Author,Genre,Publication_Year,Pages,Availability
+B001,The Silent Patient,Alex Michaelides,Thriller,2019,336,Available
+B002,Atomic Habits,James Clear,Self-Help,2018,320,Checked Out
+B003,To Kill a Mockingbird,Harper Lee,Fiction,1960,281,Available
+B004,1984,George Orwell,Dystopian,1949,328,Available
+B005,The Hobbit,J.R.R. Tolkien,Fantasy,1937,310,Checked Out
+B006,Sapiens,Yuval Noah Harari,History,2011,443,Available
+B007,The Alchemist,Paulo Coelho,Fiction,1988,208,Available
+B008,Deep Work,Cal Newport,Productivity,2016,304,Checked Out
+B009,Dune,Frank Herbert,Science Fiction,1965,412,Available
+B010,The Psychology of Money,Morgan Housel,Finance,2020,256,Available
