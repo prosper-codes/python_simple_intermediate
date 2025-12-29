@@ -71,7 +71,8 @@ while not game_over:
         game_over = True
             
             
-    window.fill(black)
+    window.fill(black
+                 )
     pygame.draw.rect(window, red, [foodx,foody,snake_block,snake_block])
     
     #update the snake's body
